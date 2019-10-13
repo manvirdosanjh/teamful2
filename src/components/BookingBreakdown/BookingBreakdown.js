@@ -1,0 +1,113 @@
+/**
+ * This component will show the booking info and calculated total price.
+ * I.e. dates and other details related to payment decision in receipt format.
+ */
+import React from 'react';
+import { oneOf, string } from 'prop-types';
+import { FormattedMessage, intlShape, injectIntl } from '../../util/reactIntl';
+import classNames from 'classnames';
+import {
+  propTypes,
+  LINE_ITEM_CUSTOMER_COMMISSION,
+  LINE_ITEM_PROVIDER_COMMISSION,
+} from '../../util/types';
+
+import LineItemUnitPriceMaybe from './LineItemUnitPriceMaybe';
+import LineItemPersonsMaybe from './LineItemPersonsMaybe';
+import LineItemBookingPeriod from './LineItemBookingPeriod';
+import LineItemUnitsMaybe from './LineItemUnitsMaybe';
+import LineItemTFSubTotalMaybe from './LineItemTFSubTotalMaybe';
+import LineItemCustomerCommissionMaybe from './LineItemCustomerCommissionMaybe';
+import LineItemCustomerCommissionRefundMaybe from './LineItemCustomerCommissionRefundMaybe';
+import LineItemProviderCommissionMaybe from './LineItemProviderCommissionMaybe';
+import LineItemProviderCommissionRefundMaybe from './LineItemProviderCommissionRefundMaybe';
+import LineItemRefundMaybe from './LineItemRefundMaybe';
+import LineItemTotalPrice from './LineItemTotalPrice';
+import LineItemUnknownItemsMaybe from './LineItemUnknownItemsMaybe';
+
+import css from './BookingBreakdown.css';
+
+export const BookingBreakdownComponent = props => {
+  const { rootClassName, className, userRole, unitType, transaction, booking, bookingData, intl } = props;
+
+  const isCustomer = userRole === 'customer';
+  const isProvider = userRole === 'provider';
+
+  const hasCommissionLineItem = transaction.attributes.lineItems.find(item => {
+    const hasCustomerCommission = isCustomer && item.code === LINE_ITEM_CUSTOMER_COMMISSION;
+    const hasProviderCommission = isProvider && item.code === LINE_ITEM_PROVIDER_COMMISSION;
+    return (hasCustomerCommission || hasProviderCommission) && !item.reversal;
+  });
+
+  const classes = classNames(rootClassName || css.root, className);
+
+  return (
+    <div className={classes}>
+      <LineItemUnitPriceMaybe transaction={transaction} unitType={unitType} intl={intl} />
+      <LineItemPersonsMaybe transaction={transaction} bookingData={bookingData} intl={intl} />
+      <LineItemBookingPeriod transaction={transaction} booking={booking} bookingData={bookingData} unitType={unitType} />
+      <LineItemUnitsMaybe transaction={transaction} unitType={unitType} />
+
+      <LineItemUnknownItemsMaybe transaction={transaction} intl={intl} />
+
+      <LineItemTFSubTotalMaybe
+        transaction={transaction}
+        unitType={unitType}
+        userRole={userRole}
+        intl={intl}
+      />
+      <LineItemRefundMaybe transaction={transaction} intl={intl} />
+
+      <LineItemCustomerCommissionMaybe
+        transaction={transaction}
+        isCustomer={isCustomer}
+        intl={intl}
+      />
+      <LineItemCustomerCommissionRefundMaybe
+        transaction={transaction}
+        isCustomer={isCustomer}
+        intl={intl}
+      />
+
+      <LineItemProviderCommissionMaybe
+        transaction={transaction}
+        isProvider={isProvider}
+        intl={intl}
+      />
+      <LineItemProviderCommissionRefundMaybe
+        transaction={transaction}
+        isProvider={isProvider}
+        intl={intl}
+      />
+
+      <hr className={css.totalDivider} />
+      <LineItemTotalPrice transaction={transaction} isProvider={isProvider} intl={intl} />
+      {hasCommissionLineItem ? (
+        <span className={css.feeInfo}>
+          <FormattedMessage id="BookingBreakdown.commissionFeeNote" />
+        </span>
+      ) : null}
+    </div>
+  );
+};
+
+BookingBreakdownComponent.defaultProps = { rootClassName: null, className: null };
+
+BookingBreakdownComponent.propTypes = {
+  rootClassName: string,
+  className: string,
+
+  userRole: oneOf(['customer', 'provider']).isRequired,
+  unitType: propTypes.bookingUnitType.isRequired,
+  transaction: propTypes.transaction.isRequired,
+  booking: propTypes.booking.isRequired,
+
+  // from injectIntl
+  intl: intlShape.isRequired,
+};
+
+const BookingBreakdown = injectIntl(BookingBreakdownComponent);
+
+BookingBreakdown.displayName = 'BookingBreakdown';
+
+export default BookingBreakdown;
